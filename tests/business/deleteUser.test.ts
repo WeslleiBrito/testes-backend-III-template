@@ -6,6 +6,7 @@ import { IdGeneratorMock } from "../mocks/IdGeneratorMock"
 import { TokenManagerMock } from "../mocks/TokenManagerMock"
 import { UserDatabaseMock } from "../mocks/UserDatabaseMock"
 import { BadRequestError } from "../../src/errors/BadRequestError"
+import { BaseError } from "../../src/errors/BaseError"
 
 describe("Testando deleteUser", () => {
   const userBusiness = new UserBusiness(
@@ -26,5 +27,66 @@ describe("Testando deleteUser", () => {
     expect(output).toEqual({
       message: "Deleção realizada com sucesso"
     })
+  })
+
+  test("erro de token vazio", async () => {
+    expect.assertions(2)
+
+    try {
+      const input = DeleteUserSchema.parse(
+        {
+          idToDelete: "id-mock-fulano",
+          token: ""  
+        }
+      )
+
+      await userBusiness.deleteUser(input)
+    } catch (error) {
+      expect(error).toBeDefined()
+      expect(error instanceof ZodError).toBe(true)
+    }
+  })
+
+  test("erro de token inválido", async () => {
+    expect.assertions(3)
+
+    try {
+      const input = DeleteUserSchema.parse(
+        {
+          idToDelete: "id-mock-fulano",
+          token: "aaaaaa"  
+        }
+      )
+
+      await userBusiness.deleteUser(input)
+
+    } catch (error) {
+      expect(error).toBeDefined()
+      expect(error instanceof BadRequestError).toBe(true)
+      if(error instanceof BaseError) {
+        expect(error.message).toBe("token inválido")
+      }
+    }
+  })
+
+  test("Verificar direito de deletar", async () => {
+
+    expect.assertions(3)
+
+    try {
+      const input = DeleteUserSchema.parse({
+        idToDelete: "id-mock",
+        token: "token-mock-fulano"
+      })
+
+      await userBusiness.deleteUser(input)
+
+    } catch (error) {
+      expect(error).toBeDefined()
+      expect(error instanceof BadRequestError).toBe(true)
+      if(error instanceof BaseError) {
+        expect(error.message).toBe("somente quem criou a conta pode deletá-la")
+      }
+    }
   })
 })
